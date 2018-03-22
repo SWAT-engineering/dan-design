@@ -1,0 +1,101 @@
+@encoding{LitteEndian}
+syntax FAT16Format =
+    Reserved resv
+    FAT(resv.boot.block_2_0.logicalSectorsPerFat, resv.boot.block_2_0.bytesPerLogicalSector) [resv.boot.block_2_0.fatCount] fatArea
+    RootDirectory(resv.boot.block_2_0, &fatArea, &root) [resv.boot.block_2_0.maxRootDirectoryEntryCount] root
+    ;
+
+syntax Reserved =
+    BootSector boot
+    // maybe we need a short alias for this ?
+    u8[boot.biosBlock.block_2_0.bytesPerLogicalSector * (boot.biosBlock.block_2_0.reservedSectorCount - 1)] restData
+    ;
+
+syntax BootSector =
+    u24 jumpInstruction
+    u8[8] oemName
+    BiosParameterBlock biosBlock
+    u8[0x1fd - &bootCode] bootCode // a self offset link
+    u8 physicalDriveNumber
+    u16 bootSectorSignature == 0xaa55
+    ;
+
+syntax FAT[u16 fatSectors, u16 bytesPerSector] = u8[fatSectors * bytesPerSector] table;
+
+// alternatives have to be named, so they can be indexed from the context by their name
+// we might have to think of a way to reference any of them.
+syntax RootDirectory 
+    = empty: EmptyEntry
+    | longfile: VFATLongFileName
+    | dir: DirectoryEntry
+    ;
+
+// 0x20 zero's
+syntax EmptyEntry = u8[0x20] empty == 0x0;
+
+syntax DirectoryEntry(BPB20 bpe, offset firstFat, offset firstRoot) = 
+    { u32 clusterSize = bpe.bytesPerLogicalSector * bpe.logicalSectorsPerCluster}
+    u8[8] shortFileName
+    u8[3] extension
+    u8 attributes
+    u8[2] _ // ignored fields
+    u16[6] _ // ignored fields
+    u16 nextCluster
+    u32 fileSize
+    Data(nextCluser, clusterSize, bpe.maxRootDirectoryEntryCount, firstRoot) firstData
+    Pointer(nextCluser, clusterSize, bpe.maxRootDirectoryEntryCount, firstFat, firstRoot)* nextData
+
+    virtual u8* dataTypes() = {
+        slackSize = clusterSize - (fileSize % clusterSize );
+        dataCount = (slackSize + fileSize) / clusterSize;
+        // is incorrect, should also go to the pointer
+        return cat(d.data[dataCount]);
+    }
+}
+
+// start at an offset from the start of the file
+// not sure about this, seems a bit un scope sensitive.
+syntax Data(u16 nextCluster, u32 clusterSize, u16 maxRootEntries, offset firstRoot)
+    = @(firstRoot + (0x20 * maxRootEntries) + ((nextCluster - 2) * clusterSize)) 
+        u8[clusterSize] data;
+
+syntax Pointer(u16 nextCluster, u32 clusterSize, u16 maxRootEntries, offset firstFat, offset firstRoot) = 
+    @(firstFat + (nextCluster * 2)) u16 nextCluster == 0xFFF8
+    Data(nextCluster, clusterSize, maxRootEntries, firstRoot) moreData // points to new nextCluster field
+    ;
+
+syntax VFATLongFileName =
+    u8 sequenceNumber
+    u8[10] nameCharacters
+    u8 attributes == 0x0F
+    u8 type == 0x0
+    u8 checksum
+    u8[12] nameCharacters2
+    u16 nextCluster == 0x0
+    u8[4] nameCharacters3
+    ;
+
+
+
+syntax BPB20 =
+    u16 bytesPerLogicalSector
+    u8 logicalSectorsPerCluster
+    u16 reservedSectorCount
+    u8 fatCount
+    u16 maxRootDirectoryEntryCount
+    ...
+    u16 logicalSectorsPerFat
+    ;
+
+syntax EBPB =
+    ...;
+
+syntax BPB331 =
+    ...;
+
+syntax BiosParameterBlock =
+    BPB20 block_2_0
+    BPB331 block_3_31
+    EBPB extendeBlock
+    ;
+

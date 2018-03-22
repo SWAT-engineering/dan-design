@@ -1,0 +1,49 @@
+@encoding{LitteEndian}
+syntax ZipFormat = 
+    LocalDeflatedFile* compressedData 
+    DirEntry* directories  
+    EndOfDir(count(compressedData), count(directories), &directories) footer
+    ;
+
+syntax LocalDeflatedFile
+  = u32 fileSignature == 0x04034b50
+    u16 extractVersion
+    u16 bitflag
+    u16 compressionMethod == 8 // shorthand for this: { *compressionMethod == 8 }
+    // ...
+    u32 crc32
+    u32 compressedSize
+    u32 uncompressedSize
+    u16 filenameSize
+    u16 extraFieldSize
+    u8[filenameSize] filename
+    u8[extraFieldSize] extraField
+    u8[compressedSize] compressedData { crc32(inflate(compressedData)) == crc32 }
+    ;
+
+syntax DirEntry
+  = u32 signature == 0x02014b50
+    u16 makeVersion
+    // ...
+    u16 filenameSize
+    u16 extraFieldSize
+    u16 fileCommentSize
+    u16 fileDisk == 0
+    // ...
+    u8[filenameSize] filename
+    u8[extraFieldSize] extraField
+    u8[fileCommentSize] fileComment
+    ;
+
+syntax EndOfDir(count compressedCount, count dirCount, offset startOfDirectories)
+  = u32 signature == 0x06054b50
+    u16 diskNumber == 0
+    u16 dirDisk == 0
+    u16 numLocalDirs == compressedCount
+    u16 numTotalDirs == numLocalDirs
+    u32 dirSize == &signature - startOfDirectories
+    u32 dirOffset == startOfDirectories
+    u16 commentSize
+    u8[commentSize] comment
+    ;
+
