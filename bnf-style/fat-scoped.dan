@@ -20,7 +20,7 @@ syntax BootSector =
     u16 bootSectorSignature == 0xaa55
     ;
 
-syntax FAT[BPB20 bootSector] = u8[bootSector.logicalSectorsPerFat * bootSector.bytesPerLogicalSector] table; // might need to skip
+syntax FAT(BPB20 bootSector) = u8[bootSector.logicalSectorsPerFat * bootSector.bytesPerLogicalSector] table; // might need to skip
 
 // alternatives have to be named, so they can be indexed from the context by their name
 // we might have to think of a way to reference any of them.
@@ -39,30 +39,25 @@ syntax DirectoryEntry((syntax nestedFilesParser, BootSector bpe, offset firstFat
     u8 attributes
     u8[2] _ // ignored fields
     u16[6] _ // ignored fields
-    u16 nextCluster
+    u16 fileStartCluster
     u32 fileSize
-    Data(nextCluser, bpe.clusterSize, bpe.block_2_0.maxRootDirectoryEntryCount, firstRoot) firstData
-    Pointer(nextCluser, bpe.clusterSize, bpe.block_2_0..maxRootDirectoryEntryCount, firstFat, firstRoot)* nextData
-
-    virtual u32 clusterCount {
-        slackSize = bpe.clusterSize - (fileSize % bpe.clusterSize );
-        return (slackSize + fileSize) / bpe.clusterSize;
-    }
+    FileCluster(fileStartCluster, bpe.clusterSize, firstRoot + bpe.block_2_0.maxRootDirectoryEntryCount) fileData
 
     // need to think about this syntax around nested parsing, and the cat & ranges syntax
-    parse(nestedFilesParser, cat(d.data, nextData[0:clusterCount]))   fileEntry
+    parse(nestedFilesParser, fileData.fullContent[:fileSize])  fileEntry
 
-}
-
-// start at an offset from the start of the file
-// not sure about this, seems a bit un scope sensitive.
-syntax Data(u16 nextCluster, u32 clusterSize, u16 maxRootEntries, offset firstRoot)
-    = @(firstRoot + (0x20 * maxRootEntries) + ((nextCluster - 2) * clusterSize)) 
-        u8[clusterSize] data;
-
-syntax Pointer(u16 nextCluster, u32 clusterSize, u16 maxRootEntries, offset firstFat, offset firstRoot) = 
-    @(firstFat + (nextCluster * 2)) u16 nextCluster == 0xFFF8
-    Data(nextCluster, clusterSize, maxRootEntries, firstRoot) moreData // points to new nextCluster field
+syntax FileCluster(u16 myCluster, u32 clusterSize, offset clusterStart)
+    = normalFile: 
+        @(clusterStart + (myCluster * clusterSize)) 
+        u16 nextCluster != 0xFFF8
+        u8[(myCluster * clusterSize) - 2] fileContents
+        FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
+        virtual u8* fullContent = fileContents + nextFileCluster.fullContent
+    | endFile:
+        @(clusterStart + (myCluster * clusterSize)) 
+        u16 nextCluster == 0xFFF8
+        u8[(myCluster * clusterSize) - 2] fileContents
+        virtual u8* fullContent = fileContents
     ;
 
 syntax VFATLongFileName =
