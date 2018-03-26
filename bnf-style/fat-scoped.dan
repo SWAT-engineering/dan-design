@@ -1,8 +1,8 @@
 @encoding{LitteEndian}
-syntax FAT16Format =
+syntax FAT16Format(syntax nestedFilesParser) =
     Reserved resv
-    FAT(resv.boot.block_2_0.logicalSectorsPerFat, resv.boot.block_2_0.bytesPerLogicalSector) [resv.boot.block_2_0.fatCount] fatArea
-    RootDirectory(resv.boot.block_2_0, &fatArea, &root) [resv.boot.block_2_0.maxRootDirectoryEntryCount] root
+    FAT(resv.boot.block_2_0) [resv.boot.block_2_0.fatCount] fatArea
+    RootDirectory(nestedFilesParser, resv.boot.block_2_0, &fatArea, &root) [resv.boot.block_2_0.maxRootDirectoryEntryCount] root
     ;
 
 syntax Reserved =
@@ -20,21 +20,20 @@ syntax BootSector =
     u16 bootSectorSignature == 0xaa55
     ;
 
-syntax FAT[u16 fatSectors, u16 bytesPerSector] = u8[fatSectors * bytesPerSector] table;
+syntax FAT[BPB20 bootSector] = u8[bootSector.logicalSectorsPerFat * bootSector.bytesPerLogicalSector] table; // might need to skip
 
 // alternatives have to be named, so they can be indexed from the context by their name
 // we might have to think of a way to reference any of them.
-syntax RootDirectory 
+syntax RootDirectory(syntax nestedFilesParser, BootSector bpe, offset firstFat, offset firstRoot )
     = empty: EmptyEntry
     | longfile: VFATLongFileName
-    | dir: DirectoryEntry
+    | dir: DirectoryEntry(nestedFilesParser, bpe, firstFat, firstRoot)
     ;
 
 // 0x20 zero's
 syntax EmptyEntry = u8[0x20] empty == 0x0;
 
-syntax DirectoryEntry(BPB20 bpe, offset firstFat, offset firstRoot) = 
-    { u32 clusterSize = bpe.bytesPerLogicalSector * bpe.logicalSectorsPerCluster}
+syntax DirectoryEntry((syntax nestedFilesParser, BootSector bpe, offset firstFat, offset firstRoot) = 
     u8[8] shortFileName
     u8[3] extension
     u8 attributes
@@ -42,15 +41,17 @@ syntax DirectoryEntry(BPB20 bpe, offset firstFat, offset firstRoot) =
     u16[6] _ // ignored fields
     u16 nextCluster
     u32 fileSize
-    Data(nextCluser, clusterSize, bpe.maxRootDirectoryEntryCount, firstRoot) firstData
-    Pointer(nextCluser, clusterSize, bpe.maxRootDirectoryEntryCount, firstFat, firstRoot)* nextData
+    Data(nextCluser, bpe.clusterSize, bpe.block_2_0.maxRootDirectoryEntryCount, firstRoot) firstData
+    Pointer(nextCluser, bpe.clusterSize, bpe.block_2_0..maxRootDirectoryEntryCount, firstFat, firstRoot)* nextData
 
-    virtual u8* dataTypes() = {
-        slackSize = clusterSize - (fileSize % clusterSize );
-        dataCount = (slackSize + fileSize) / clusterSize;
-        // is incorrect, should also go to the pointer
-        return cat(d.data[dataCount]);
+    virtual u32 clusterCount {
+        slackSize = bpe.clusterSize - (fileSize % bpe.clusterSize );
+        return (slackSize + fileSize) / bpe.clusterSize;
     }
+
+    // need to think about this syntax around nested parsing, and the cat & ranges syntax
+    parse(nestedFilesParser, cat(d.data, nextData[0:clusterCount]))   fileEntry
+
 }
 
 // start at an offset from the start of the file
@@ -97,5 +98,7 @@ syntax BiosParameterBlock =
     BPB20 block_2_0
     BPB331 block_3_31
     EBPB extendeBlock
+
+    virtual u32 clusterSize = block_2_0.bytesPerLogicalSector * block_2_0.logicalSectorsPerCluster;
     ;
 
