@@ -1,0 +1,34 @@
+` Alternative 1
+
+syntax FileCluster(u16 myCluster, u32 clusterSize, int clusterStart) exporting (u8* fullContent)
+    = u16 nextCluster
+      u8[(myCluster * clusterSize) - 2] fileContents
+      FileClusterNext fileClusterNext(nextCluster)
+      fullContent = fileContents + fileClusterNext.fullContent
+    ;
+
+syntax FileClusterNext(u16 nextCluster) exporting (u8* fullContent) 
+  | next : { nextCluster != 0xFFF8 }
+    FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
+    fullContent = nextFileCluster.fullContent
+  | end: { nextCluster == 0xFFF8 }
+    fullContent = u8nil
+  ;
+  
+` Alternative 2
+
+syntax FileCluster(u16 myCluster, u32 clusterSize, int clusterStart) exporting (u8* fullContent)
+    = u16 nextCluster
+      u8[(myCluster * clusterSize) - 2] fileContents
+      FileClusterNext fileClusterNext(nextCluster == 0xFFF8)
+      fullContent = fileContents + fileClusterNext.fullContent
+    ;
+
+syntax FileClusterNext(false) exporting (u8* fullContent) 
+    FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
+    fullContent = nextFileCluster.fullContent
+  ;
+  
+syntax FileClusterNext(true) exporting (u8* fullContent) 
+    fullContent = u8nil
+  ;
