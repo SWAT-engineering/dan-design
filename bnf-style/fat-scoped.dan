@@ -43,8 +43,11 @@ syntax DirectoryEntry((syntax nestedFilesParser, BootSector bpe, offset firstFat
     u32 fileSize
     FileCluster(fileStartCluster, bpe.clusterSize, firstRoot + bpe.block_2_0.maxRootDirectoryEntryCount) fileData
 
-    // need to think about this syntax around nested parsing, and the cat & ranges syntax
-    parse(nestedFilesParser, fileData.fullContent[:fileSize])  fileEntry
+    derived {
+        // need to think about this syntax around nested parsing, and the cat & ranges syntax
+        parse(nestedFilesParser, fileData.fullContent[:fileSize])  fileEntry
+    }
+    ;
 
 syntax FileCluster(u16 myCluster, u32 clusterSize, offset clusterStart)
     = normalFile: 
@@ -52,12 +55,16 @@ syntax FileCluster(u16 myCluster, u32 clusterSize, offset clusterStart)
         u16 nextCluster != 0xFFF8
         u8[(myCluster * clusterSize) - 2] fileContents
         FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
-        virtual u8* fullContent = fileContents + nextFileCluster.fullContent
+        derived {
+            u8* fullContent = fileContents + nextFileCluster.fullContent
+        }
     | endFile:
         @(clusterStart + (myCluster * clusterSize)) 
         u16 nextCluster == 0xFFF8
         u8[(myCluster * clusterSize) - 2] fileContents
-        virtual u8* fullContent = fileContents
+        derived {
+            u8* fullContent = fileContents
+        }
     ;
 
 syntax VFATLongFileName =
@@ -92,8 +99,9 @@ syntax BPB331 =
 syntax BiosParameterBlock =
     BPB20 block_2_0
     BPB331 block_3_31
-    EBPB extendeBlock
-
-    virtual u32 clusterSize = block_2_0.bytesPerLogicalSector * block_2_0.logicalSectorsPerCluster;
+    EBPB extendeBlock  
+    derived {
+        u32 clusterSize => block_2_0.bytesPerLogicalSector * block_2_0.logicalSectorsPerCluster;
+    }
     ;
-
+  
