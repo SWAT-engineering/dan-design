@@ -5,6 +5,10 @@ syntax ZipFormat =
     EndOfDir(count(compressedData), count(directories), &directories) footer
     ;
 
+external u32 crc32(u8*);
+external u8* inflate(u8*);
+
+
 syntax LocalDeflatedFile
   = u32 fileSignature == 0x04034b50
     u16 extractVersion
