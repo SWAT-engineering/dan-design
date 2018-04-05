@@ -1,4 +1,115 @@
-` Alternative 1
+@encoding{LitteEndian}
+syntax FAT16Format(Token nestedFilesParser) = // Token is the top type
+    Reserved resv
+    alias BPB20 block = resv.boot.block2_0
+    FAT(block)[block.fatCount] fatArea
+    RootDirectory(nestedFilesParser, block, fatArea, root.offset)[block.maxRootDirectoryEntryCount] root
+    ;
+
+syntax Reserved =
+    BootSector boot
+    // maybe we need a short alias for this ?
+    alias BPB20 block = boot.biosBlock.block_2_0
+    u8[block.bytesPerLogicalSector * (block.reservedSectorCount - 1)] restData
+    ;
+
+syntax BootSector =
+    u24 jumpInstruction
+    u8[8] oemName
+    BiosParameterBlock biosBlock
+    u8[0x1fd - bootCode.offset] bootCode // a self offset link
+    u8 physicalDriveNumber
+    u16 bootSectorSignature == 0xaa55
+    ;
+
+syntax FAT(BPB20 bootSector) = u8[bootSector.logicalSectorsPerFat * bootSector.bytesPerLogicalSector] table; // might need to skip
+
+// alternatives have to be named, so they can be indexed from the context by their name
+// we might have to think of a way to reference any of them.
+syntax RootDirectory(syntax nestedFilesParser, BootSector bpe, offset firstFat, offset firstRoot )
+    = empty: EmptyEntry
+    | longfile: VFATLongFileName
+    | dir: DirectoryEntry(nestedFilesParser, bpe, firstFat, firstRoot)
+    ;
+
+// 0x20 zero's
+syntax EmptyEntry = u8[0x20] empty == 0x0;
+
+syntax DirectoryEntry((syntax nestedFilesParser, BootSector bpe, offset firstFat, offset firstRoot) = 
+    u8[8] shortFileName
+    u8[3] extension
+    u8 attributes
+    u8[2] _ // ignored fields
+    u16[6] _ // ignored fields
+    u16 fileStartCluster
+    u32 fileSize
+    FileCluster(fileStartCluster, bpe.clusterSize, firstRoot + bpe.block_2_0.maxRootDirectoryEntryCount) fileData
+
+    derived {
+        // need to think about this syntax around nested parsing, and the cat & ranges syntax
+        parse(nestedFilesParser, fileData.fullContent[:fileSize])  fileEntry
+    }
+    ;
+
+syntax FileCluster(u16 myCluster, u32 clusterSize, offset clusterStart)
+    = normalFile: 
+        @(clusterStart + (myCluster * clusterSize)) 
+        u16 nextCluster != 0xFFF8
+        u8[(myCluster * clusterSize) - 2] fileContents
+        FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
+        derived {
+            u8* fullContent = fileContents + nextFileCluster.fullContent
+        }
+    | endFile:
+        @(clusterStart + (myCluster * clusterSize)) 
+        u16 nextCluster == 0xFFF8
+        u8[(myCluster * clusterSize) - 2] fileContents
+        derived {
+            u8* fullContent = fileContents
+        }
+    ;
+
+syntax VFATLongFileName =
+    u8 sequenceNumber
+    u8[10] nameCharacters
+    u8 attributes == 0x0F
+    u8 type == 0x0
+    u8 checksum
+    u8[12] nameCharacters2
+    u16 nextCluster == 0x0
+    u8[4] nameCharacters3
+    ;
+
+
+
+syntax BPB20 =
+    u16 bytesPerLogicalSector
+    u8 logicalSectorsPerCluster
+    u16 reservedSectorCount
+    u8 fatCount
+    u16 maxRootDirectoryEntryCount
+    ...
+    u16 logicalSectorsPerFat
+    ;
+
+syntax EBPB =
+    ...;
+
+syntax BPB331 =
+    ...;
+
+syntax BiosParameterBlock =
+    BPB20 block_2_0
+    BPB331 block_3_31
+    EBPB extendeBlock  
+    derived {
+        u32 clusterSize => block_2_0.bytesPerLogicalSector * block_2_0.logicalSectorsPerCluster;
+    }
+    ;
+    
+// How to improve the encoding of dependent choices
+
+// Alternative 1
 
 syntax FileCluster(u16 myCluster, u32 clusterSize, int clusterStart) exporting (u8* fullContent)
     = u16 nextCluster
@@ -15,7 +126,7 @@ syntax FileClusterNext(u16 nextCluster) exporting (u8* fullContent)
     fullContent = u8nil
   ;
   
-` Alternative 2
+// Alternative 2
 
 syntax FileCluster(u16 myCluster, u32 clusterSize, int clusterStart) exporting (u8* fullContent)
     = u16 nextCluster
