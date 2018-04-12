@@ -1,0 +1,103 @@
+def FAT16Format< nestedParser: Token >: struct {
+	meta encoding: Encoding = LittleIndian
+	
+	reserved: Reserved
+
+	block: BPB20 = reserved.boot.block2_0 // types of derived things can be inferred
+
+	fatArea: FAT<block> [block.fatCount] 
+
+	root: RootDirectory<nestedParser, block, fatArea.offset, root.offset> [block.maxRootDirectoryEntryCount]
+}
+
+def Reserved : struct{
+	boot: BootSector
+
+	size: int = boot.biosBlock.block_2_0.bytesPerLogicalSector * (boot.biosBlock.block_2_0.reservedSectorCount - 1) // How to do coercion? or polymorphic operators?
+
+	restData: u8[size]
+
+}
+
+// We might want to define the serial data (def's) in a different region from derived data. 
+// However, they are interdependent. If we do so, we have to calculate these dependencies in order to generate correct code. 
+// Next another encoding for Reserved, where we need to calculate a dependency graph
+
+def Reserved2 : struct{
+	boot: BootSector
+	restData: u8[size]
+
+	derived size: int = boot.biosBlock.block_2_0.bytesPerLogicalSector * (boot.biosBlock.block_2_0.reservedSectorCount - 1) // How to do coercion? or polymorphic operators?
+}
+
+// Maybe offsets are reseolved earlier in the call graph?
+
+def BootSector : struct {
+    jumpInstruction: U24
+    oemName: u8[8]
+    biosBlock: BiosParameterBlock 
+    bootCode: u8[0x1fd - bootCode.offset]  // a self offset link. Alternatively, it could be a `offset` special variable as `this` in Java
+    physicalDriveNumber: u8
+    bootSectorSignature :u16?(this == 0xaa55)
+}
+
+def FAT<bootSector: BPB20> : u8[bootSector.logicalSectorsPerFat * bootSector.bytesPerLogicalSector] table; // might need to skip
+
+def RootDirectory < nestedFilesParser: Token, bpe: BootSector, firstFat: int, firstRoot: int > : union {
+    empty: EmptyEntry
+    longfile: VFATLongFileName
+    dir: DirectoryEntry(nestedFilesParser, bpe, firstFat, firstRoot)
+}   
+
+def EmptyEntry: u8[0x20] ? (this = 0x0 )
+
+def DirectoryEntry(nestedFilesParser: Token, bpe: BootSector, firstFat: int, firstRoot: int): struct {
+    shortFileName: u8[8] 
+    extension: u8[3] 
+    attributes: u8
+    _: u8[2] // ignored fields
+    _: u16[6] // ignored fields
+    fileStartCluster: u16
+    fileSize: u32
+    nextCluster: u16
+    fileData: FileCluster<nextCluster, fileStartCluster, bpe.clusterSize, firstRoot + bpe.block_2_0.maxRootDirectoryEntryCount>
+    
+    // need to think about this syntax around nested parsing, and the cat & ranges syntax
+    fileEntry = parse(nestedFilesParser, fileData.fullContent[:fileSize])  
+ }
+
+ syntax FileCluster(nextCluster: u16, myCluster: u16, clusterSize: u32, clusterStart: offset)
+    =  union {
+       	derived fullContent: u8[]
+       	[nextCluster != 0xFFF8] normalFile: struct{
+        	@(clusterStart + (myCluster * clusterSize))  // pending how to express this
+       		u8[(myCluster * clusterSize) - 2] fileContents
+        	FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
+        	fullContent = fileContents + nextFileCluster.fullContent
+    	}
+    	default endFile: struct{
+        	@(clusterStart + (myCluster * clusterSize)) 
+        	fileContents: u8[(myCluster * clusterSize) - 2] 
+       		fullContent = fileContents
+       	}
+      }
+
+// The former is equivalent to the following, not using conditions on the elements of the union:
+
+ syntax FileCluster2(u16 nextCluster, u16 myCluster, u32 clusterSize, offset clusterStart)
+    =  union {
+         derived fullContent: u8[]
+       	 normalFile: struct{
+        	@(clusterStart + (myCluster * clusterSize))  // pending how to express this
+       		nextCluster: u16 ? (this != 0xFFF8)
+       		u8[(myCluster * clusterSize) - 2] fileContents
+        	FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
+        	fullContent = fileContents + nextFileCluster.fullContent
+    	}
+    	default endFile: struct{
+    		@(clusterStart + (myCluster * clusterSize)) // pending how to express this
+    		nextCluster: u16 ? (this == 0xFFF8)
+        	fileContents: u8[(myCluster * clusterSize) - 2] 
+       		fullContent = fileContents
+       	}
+      }
