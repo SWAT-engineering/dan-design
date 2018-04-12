@@ -59,27 +59,29 @@ def DirectoryEntry(nestedFilesParser: Token, bpe: BootSector, firstFat: int, fir
     _: u16[6] // ignored fields
     fileStartCluster: u16
     fileSize: u32
-    nextCluster: u16
-    fileData: FileCluster<nextCluster, fileStartCluster, bpe.clusterSize, firstRoot + bpe.block_2_0.maxRootDirectoryEntryCount>
+    fileData: FileCluster<fileStartCluster, bpe.clusterSize, firstRoot + bpe.block_2_0.maxRootDirectoryEntryCount>
     
     // need to think about this syntax around nested parsing, and the cat & ranges syntax
     fileEntry = parse(nestedFilesParser, fileData.fullContent[:fileSize])  
  }
 
- syntax FileCluster(nextCluster: u16, myCluster: u16, clusterSize: u32, clusterStart: offset)
-    =  union {
+ syntax FileCluster(myCluster: u16, clusterSize: u32, clusterStart: offset)
+    =  
+    struct{
+      @(clusterStart + (myCluster * clusterSize))
+      nextCluster: u16
+      fileContents: u8[(myCluster * clusterSize) - 2] 
+      actual: union {
        	derived fullContent: u8[]
-       	[nextCluster != 0xFFF8] normalFile: struct{
-        	@(clusterStart + (myCluster * clusterSize))  // pending how to express this
-       		u8[(myCluster * clusterSize) - 2] fileContents
-        	FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
-        	fullContent = fileContents + nextFileCluster.fullContent
+       	[nextCluster != 0xFFF8] struct{
+          FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
+          fullContent = fileContents + nextFileCluster.fullContent
     	}
-    	default endFile: struct{
-        	@(clusterStart + (myCluster * clusterSize)) 
-        	fileContents: u8[(myCluster * clusterSize) - 2] 
+    	struct{
        		fullContent = fileContents
        	}
+      }
+      fullContent: u8[] = actual.fullContent
       }
 
 // The former is equivalent to the following, not using conditions on the elements of the union:
