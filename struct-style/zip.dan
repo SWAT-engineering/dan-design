@@ -1,0 +1,25 @@
+def ZipFormat : struct {
+	meta encoding: Encoding = LittleIndian
+	
+	def compressData: LocalDeflatedFile[]
+	def directories: DirEntry[]
+
+	derived directoriesCount : Int = count(directories)
+	def footer: EndOfDir<count(compressedData), directoriesCount, directories.offset>
+}
+
+def LocalDeflatedFile : struct{
+	def fileSignature: u32? ( this == 0x04034b50 )
+	def extractVersion: u16
+    def bitFlag: u16
+    def compressionMethod: u16 ? ( this == 8 )
+    ...
+    def crc32: u32
+    def compressedSize: u32
+    def uncompressedSize: u32
+    def filenameSize: u16
+    def extraFieldSize: u16
+    def filename: U8[filenameSize]
+    def extraFieldSize: U8[extraFieldSize]
+    def compressedData: U8[compressedSize] ? (crc32Fun(inflate(this)) == crc32 )
+}
