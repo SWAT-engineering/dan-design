@@ -9,7 +9,7 @@ This is DAN's type lattice:
 		         -----------------------------------------
 		         |            |        |       |         |
 		       token         bool     int    string.   array
-                         |
+                       |
         ---------------------------------------------
         |               |        |     |      |     |
      user-define       u4      u8    u16    u32   u64
