@@ -4,7 +4,7 @@
 
 This is DAN's type lattice:
 
-							 	thing
+						thing
 				             	  |
 		         -----------------------------------------
 		         |            |        |       |         |
