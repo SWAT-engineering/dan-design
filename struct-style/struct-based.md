@@ -293,6 +293,29 @@ def PNG: struct{
 def Image: DescriptionAndContent<PNG>(PNG.type)
 ```
 
+**TODO:** Decide whether we use type parameters or not. If not, we can represent the examples of this section as follows:
+
+```
+def parse(typ:type, content:u8[]): Token
+
+def DescriptionAndContent(parser: type): struct{
+	def description: u8[10]
+	def content: u8[100]
+	def parsedContent: Token = parse(parser, content)
+}
+
+def PNG: struct{
+	first: u8[3] ? (this == "PNG")
+	header: u8[25]
+	content: u8[]
+}
+
+def Image: DescriptionAndContent(PNG.type)
+```
+
+The main disadvantage of this encoding is that we cannot enforce that `DescriptionAndContent.parsedContent` is of a specific type, and instead, we can just assume that it is the top token type `Token`. Is this really a problem?
+
+
 # Type cohercions
 
 How byte token types such as `u8` interact with simple types such as `int`?
