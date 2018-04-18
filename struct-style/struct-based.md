@@ -15,7 +15,7 @@ This is DAN's type lattice:
      user-define       u4      u8    u16    u32   u64
     
 
-User-defined types are those defined via the `struct` or `union` keyword.
+User-defined types are those defined via the `struct` or `choice` keyword.
 
 Notice there are token types and simple types such as `bool, int, string`. Only descendants of `token` act also as parsers. This distinction is important, as allows us to create useful data structures that do not dependent on parsing.
 
@@ -44,7 +44,7 @@ def Info: struct{
 `Name` and `Info` defines types. If we start the execution at `Info`, the result of that execution will be a data structure containing fields name and email.
 
 
-# Examples
+# Primitive data types
 
 
 A simple program:
@@ -68,6 +68,8 @@ def A: u8 ?(this == 65)
 ```
 
 It defines types `A` that works as an alias of `u8 ?(this == 65)`. It also defines a parser that will exactly parse 1 byte that must be the `A` character . However, from a typing perspective, `A` is only interchangeably with `u8`. There is no dependent typing mechanism to track conditions. Notice that the special variable `this` in the condition refers to the type/parser currently being defined.
+
+# Struct types
 
 We can also define structured data:
 
@@ -164,21 +166,35 @@ def MustBeOfCertainAge(age: Boolean): struct{
 
 For example, a token of type `MustBeOfCertainAge(1)` is interchangeable with any other that has the same parametric type. (**Note:** Is this consistent with our description of types above?).s
 
-We can also define union types:
+Sometimes, a field can be needed just for the parsing but it does not really need to have a named assigned. In that case, we can use the field name `_` or simply omit the left side hand of the field completely:
+
+```
+def Ignoring: struct{
+	   name: u8[20]
+	   _: u8 ? (this == ' ') // there must be a space after the name, but we do not name it
+	   age: u8[2]
+	   u8 ? (this == ' ') // there must be a space after the age, but we do not name it
+   }
+```
+
+
+# Choice types
+
+We can also define choice types:
 
 ```
 def B: u8 ?(this == 66)
 
-def AorB: union{
+def AorB: choice{
 	a: A
 	b: B
 }
 ```
 
-Union types imply backtracking. In this case, first an `A` will be tried to be parsed, and if not a `B`, in that declaration order. In other words, by default, the disambiguation is driven by the parsing process. We can also create an union that is not dependent on the parsing. In that case, we have to put conditions on each member of the union. For example:
+Choice types imply backtracking. In this case, first an `A` will be tried to be parsed, and if not a `B`, in that declaration order. In other words, by default, the disambiguation is driven by the parsing process. We can also create an choice that is not dependent on the parsing. In that case, we have to put conditions on each member of the choice. For example:
 
 ```
-def SimpleUnion(x: int): union{
+def SimpleChoice(x: int): choice{
 	[x == 0] zero: u8 ?(this == 60)
 	default other: u8 ?(this >= 61 && this <= 71)
 }
@@ -186,10 +202,10 @@ def SimpleUnion(x: int): union{
 
 In this case, the parsing will be directed by a condition. If the parameter is 0, then the first alternative will be tried; otherwise, the second one, in that order. Notice that no automatic backtracking takes place in this case, since the parsing is directed by the conditions enclosed in brackets.
 
-Union type might also have derived fields. In that case, we need to declare them in the outer scope, and assign them in each variant:
+Choice types might also have derived fields. In that case, we need to declare them in the outer scope, and assign them in each variant:
 
 ```
-def DerivedUnion: union{
+def DerivedChoice: choice{
 	size: int
 	variant1: struct{
 		a: u8? (this == 65)
@@ -204,6 +220,78 @@ def DerivedUnion: union{
 }
 ```
 
+# Meta properties
+
+Properties that have to do with how to parse the token types are represented as annotations at the declaration level:
+
+```
+def Simple1: struct@(encoding=LittleIndian){
+	content: u8[]
+}
+```
+
+This means that Little Indian will be the encoding used for parsing content to produce a value of type `Simple1`.
+
+Another meta-property is `offset`, that tells where the parsing should start, relative to the current stream of bytes. If omitted, the default is the current offset. Here an example where we start parsing from the 10th byte on:
+
+```
+def Simple2: struct@(offset=9){
+	content: u8[]
+}
+```
+
+# Type parameters
+
+In certain ocassions, we need to write code that is type-generic, for example:
+
+```
+def GenericStruct<T> = struct{
+	tentimes: T[10]
+}
+```
+
+We can bind the type parameter obtaining different parsers for 10-element data:
+
+```
+def Name = u8[20]
+
+def TenOfEverything = struct{
+	tenNumbers: GenericStruct<u8>
+	tenNames: GenericStruct<Name>
+}
+```
+
+# Reified types
+
+We can obtain the type of a value by using `.type`. An example of the utility of this is nested parsing:
+
+```
+def parse<T>(typ:type<T>, content:u8[]): T
+```
+
+`parse` is a built-in function that receives a reified type `type<T>` and an array of bytes and produces an element of type `T` by parsing the bytes according to the parser that type `T` defines.
+
+For example:
+
+```
+def DescriptionAndContent<T>(parser: type<T>): struct{
+	def description: u8[10]
+	def content: u8[100]
+	def parsedContent: T = parse<T>(parser, content)
+}
+```
+
+In this case, the derived field `parsedContent` holds a reference to a value of type `T`, produced by parsing the content of field `content` using the parser defined by reified type `T`. This is an example of a client for `HeaderAndContent`.
+
+```
+def PNG: struct{
+	first: u8[3] ? (this == "PNG")
+	header: u8[25]
+	content: u8[]
+}
+
+def Image: DescriptionAndContent<PNG>(PNG.type)
+```
 
 # Type cohercions
 

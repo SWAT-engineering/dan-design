@@ -2,20 +2,20 @@ import SingleZip
 import PNG
 
 def FORMAT : choice{
-  fat16: FAT16Format<FORMAT>(FORMAT.type)
+  fat16: FAT16Format(FORMAT.type)
   zip: SingleZipFormat
   png: PngFormat
 }
 
-def FORMAT_ZIP: struct@(encoding = LittleIndian){
+def FORMAT_ZIP<: struct@(encoding = LittleIndian){
   _: (struct{ ldf: LocalDeflatedFile.               // anonymous struct/choice types?
-             _: Token = parse(PNG.type, inflate(ldf.compressedData))
+             _: PNG = parse<PNG>(PNG.type, inflate(ldf.compressedData))
             })[]
   entries: DirEntry[]
   _: EndOfDir                       // alternatively just: `EndOfDir` in place of `_:EndOfDir`
 }
 
-def FAT16Format<T>(format: type<T>): struct@(encoding = LittleIndian) {
+def FAT16Format(format: Type): struct@(encoding = LittleIndian) {
 	
   reserved: Reserved
 
@@ -59,7 +59,7 @@ def BootSector : struct {
 
 def FAT(bootSector: BPB20) : u8[bootSector.logicalSectorsPerFat * bootSector.bytesPerLogicalSector] table; // might need to skip
 
-def RootDirectory<T> (format: type<T>, bpe: BootSector, firstFat: int, firstRoot: int) : choice {
+def RootDirectory<T> (format: Type, bpe: BootSector, firstFat: int, firstRoot: int) : choice {
     empty: EmptyEntry
     longfile: VFATLongFileName
     dir: DirectoryEntry(format, bpe, firstFat, firstRoot)
@@ -67,9 +67,9 @@ def RootDirectory<T> (format: type<T>, bpe: BootSector, firstFat: int, firstRoot
 
 def EmptyEntry: u8[0x20] ? (this = 0x0 )
 
-def parse<T>(typ:type[T], content:u8[]): T
+def parse(typ:Type, content:u8[]): Token
 
-def DirectoryEntry<T>(nestedFilesParser: type<T>, bpe: BootSector, firstFat: int, firstRoot: int): struct {
+def DirectoryEntry(nestedFilesParser: Type, bpe: BootSector, firstFat: int, firstRoot: int): struct {
     shortFileName: u8[8] 
     extension: u8[3] 
     attributes: u8
@@ -81,7 +81,7 @@ def DirectoryEntry<T>(nestedFilesParser: type<T>, bpe: BootSector, firstFat: int
     
     // need to think about this syntax around nested parsing, and the cat & ranges syntax
 
-    fileEntry: T = parse<T>(nestedFilesParser, fileData.fullContent[:fileSize])  
+    fileEntry: Token  = parse(nestedFilesParser, fileData.fullContent[:fileSize])  // filterEntry has the top token type
  }
 
  syntax FileCluster(myCluster: u16, clusterSize: u32, clusterStart: offset)
@@ -90,14 +90,14 @@ def DirectoryEntry<T>(nestedFilesParser: type<T>, bpe: BootSector, firstFat: int
       nextCluster: u16
       fileContents: u8[(myCluster * clusterSize) - 2] 
       choice {
-       	fullContent: u8[]
-       	[nextCluster != 0xFFF8] struct{
+        fullContent: u8[]
+        [nextCluster != 0xFFF8] struct{
           FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
           fullContent = fileContents + nextFileCluster.fullContent
-    	   }
-    	   struct{
-       		 fullContent = fileContents
-       	 }
+         }
+         struct{
+           fullContent = fileContents
+         }
       }
       fullContent: u8[] = actual.fullContent
       }
@@ -109,15 +109,15 @@ def DirectoryEntry<T>(nestedFilesParser: type<T>, bpe: BootSector, firstFat: int
          fullContent: u8[]
          whereToStart: int = clusterStart + (myCluster * clusterSize)
          struct@(offset = wheretoStart) {
-        	 // pending how to express this
-       		 nextCluster: u16 ? (this != 0xFFF8)
-       		 u8[(myCluster * clusterSize) - 2] fileContents
-        	 FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
-        	 fullContent = fileContents + nextFileCluster.fullContent
-    	   }
-    	   struct @(offset = wheretoStart) {
-    	  	 nextCluster: u16 ? (this == 0xFFF8)
-        	 fileContents: u8[(myCluster * clusterSize) - 2] 
-       		 fullContent = fileContents
-       	}
+           // pending how to express this
+           nextCluster: u16 ? (this != 0xFFF8)
+           u8[(myCluster * clusterSize) - 2] fileContents
+           FileCluster(nextCluster, clusterSize, clusterStart) nextFileCluster
+           fullContent = fileContents + nextFileCluster.fullContent
+         }
+         struct @(offset = wheretoStart) {
+           nextCluster: u16 ? (this == 0xFFF8)
+           fileContents: u8[(myCluster * clusterSize) - 2] 
+           fullContent = fileContents
+        }
       }
