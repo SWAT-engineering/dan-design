@@ -232,11 +232,27 @@ def Simple1: struct@(encoding=LittleIndian){
 
 This means that Little Indian will be the encoding used for parsing content to produce a value of type `Simple1`.
 
-Another meta-property is `offset`, that tells where the parsing should start, relative to the current stream of bytes. If omitted, the default is the current offset. Here an example where we start parsing from the 10th byte on:
+Another meta-property is `offset`, that creates a new parsing pointer (disconnected from the context) and moves that parsing pointer to the specific (absolute) offset. If omitted, the default is to advance the normal pointer of the parent. Here an example where we start parsing from the 10th byte on:
 
 ```
+def Root : struct {
+    // parsing pointer is at position 0
+    u8 oneByte
+    // parsing pointers is at position 1
+    u32 oneInt
+    // parsing pointers is at position 5
+    Simple2 sim
+    // parsing pointers is at position 5
+    Simple2 sim
+    // parsing pointers is at position 5
+    u8 oneByte
+    // parsing pointers is at position 6
+}
+
 def Simple2: struct@(offset=9){
-	content: u8[]
+    // parsing pointers is at position 9
+    content: u8[4]
+    // parsing pointers is at position 13
 }
 ```
 
