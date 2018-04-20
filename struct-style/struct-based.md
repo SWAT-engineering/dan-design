@@ -337,3 +337,60 @@ The main disadvantage of this encoding is that we cannot enforce that `Descripti
 How byte token types such as `u8` interact with simple types such as `int`?
 
 
+# Metal constructs mapped
+
+## Tokens
+| Metal shorthand | Description | DSL |
+| --- | --- | --- |
+| `def(name, size)` | name a field with a size in bytes | `name : u8[size]` or `name: u32` |
+| `nod(size)` | a ignored set of bytes | `_ : u8[size]` or `u8[size]` |
+| `cho(name, list[Token])` | find the first token that parses successfully | `def name = choice { .. }` or inline as `x : choice { ... }` |
+| `rep(name, Token)` | name a field that repeats a token until it fails to parse | `name: T[]` |
+| `repn(name, Token, size)` | name a field that repeats a token n times | `name: T[n]` |
+| `seq(name, list[Token])` | define a sequence of tokens | `def name = struct { .. }` |
+| `sub(name, startAt, token)` | parse a token at a specific offset | `struct@(offset=startAt) { .. }` (not that this feature splits up the naming and the defining of the offset) |
+| `pre(name, Token, predicate)` | unsure what it does | |
+| `post(name, Token, predicate)` | unsure what it does | |
+| `whl(name, Token, predicate)` | unsure what it does | |
+| `opt(name, Token)` | unsure what it does | |
+| `token(name)` | get a reference to a token "type" instead of a value | `T.type` (or `T.token`) |
+| `tie(name, Token, data)` | Run a token parser on the result of a data expression | `name: parse(Token, data)`|
+| `until(name, initialSize?, stepSize?, maxSize?, terminatorToken)` | unclear, the size params are all optional | |
+| `when(name, Token, predicate)` | unsure | |
+
+## Expression
+
+| Metal shorthand | Description | DSL |
+| --- | --- | --- |
+| `add` | | `l + r` |
+| `div` | | `l / r` |
+| `mul` | | `l * r` |
+| `sub` | | `l - r` |
+| `mod` | | `l % r` |
+| `neg` | | `-l` |
+| `shl` | | `l << r` |
+| `shr` | | `l >> r` |
+| `and` | binary and | `l & r` |
+| `or` |  binary or | `l & r` |
+| `not` |  binary (and boolean) not | `!l` |
+| `and` | boolean and | `l && r` |
+| `or` |  boolean or | `l && r` |
+| `eq* | comparision operators | default comparison operators |
+| `con` | constants | literal syntax for arbitrary precision ints, strings, arrays |
+| `len(l)` |  | `l.length` |
+| `ref(name)` | create a list of all instances of something with that name | `x.name` (however, it's not dynamic scoping anymore) |
+| `first(l)` | first element of the list/array | `l[0]` |
+| `last(l)` | last element of the list/array | `l[-1]` or `l[l.length - 1]` |
+| `nth(l, i)` | nth element of the list/array | `l[i]` |
+| `offset(reference name)` | get the absolute offset of something that has already been parsed | `n.offset` (without dynamic scoping aspect) |
+| `cat(a, b)` | concat the bytes together of two parsed trees | `a + b` |
+| `elvis(v, orElse)` | a bit unclear what it exactly does, as it's mixed with the everything is a list concept of metal | |
+| `count(t)` | the size of  a list | unclear, as we've removed the concepts of lists |
+| `foldLeft(values, reducer, initial?)` | unclear if still needed after removing lists concept | |
+| `foldRight(values, reducer, initial?)` | unclear if still needed after removing lists concept | |
+| `fold(values, reducer, initial?)` | unclear if still needed after removing lists concept | |
+| `mapLeft(values, mapper, left, rightExpand)` | unclear if still needed after removing lists concept | |
+| `mapRight(values, mapper, leftExpand, right)` | unclear if still needed after removing lists concept | |
+| `rev(values)` | reverse a list | unclear if still needed |
+| `exp(base, count)` | repeat (expand) `base` `count` times | missing, maybe something with slices? |
+| `bytes(x)` | get the bytes represented by something | automatic cohercion solves this |
