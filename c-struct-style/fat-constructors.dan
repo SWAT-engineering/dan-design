@@ -22,7 +22,7 @@ struct FORMAT_ZIP@(encoding = LittleIndian){
     PNG = parse<PNG>(PNG.type, inflate(ldf.compressedData))
    })[]
   DirEntry[] entries
-  EndOfDir                       // alternatively just: `EndOfDir` in place of `_:EndOfDir`
+  EndOfDir                       // alternatively just: `EndOfDir` in place of `EndOfDir _`
 }
 
 struct FAT16Format(Type format)t@(encoding = LittleIndian) {
