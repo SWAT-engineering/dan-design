@@ -44,7 +44,7 @@ struct Reserved2{
 
 struct BootSector{
   u24 jumpInstruction
-  u8[] oemName[u8]
+  u8[] oemName[8]
   BiosParameterBlock biosBlock
   u8[] bootCode[0x1fd - bootCode.offset] // a self offset link. Alternatively, it could be a `offset` special variable as `this` in Java
   u8 physicalDriveNumber
@@ -61,7 +61,7 @@ choice RootDirectory<T> (Type format, BootSector bpe, int firstFat, int firstRoo
   DirectoryEntry dir(format, bpe, firstFat, firstRoot)
 }   
 
-u8[] EmptyEntry[0x20]?(== 0x0 )
+alias u8[] EmptyEntry[0x20]?(== 0x0 )
 
 native Token parse(Type typ, u8[] content) 
 
