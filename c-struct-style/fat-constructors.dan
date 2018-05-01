@@ -13,7 +13,7 @@ struct FORMAT_ZIP@(encoding = LittleIndian){
     PNG = parse<PNG>(PNG.type, inflate(ldf.compressedData))
    })[] _
   DirEntry[] entries
-  EndOfDir                       // alternatively just: `EndOfDir` in place of `EndOfDir _`
+  EndOfDir _                      
 }
 
 struct FAT16Format(Type format)t@(encoding = LittleIndian) {
@@ -83,7 +83,7 @@ struct DirectoryEntry(Type nestedFilesParser, BootSector bpe, int firstFat, int 
 
 choice FileCluster2(u16 nextCluster, u16 myCluster, u32 clusterSize, offset clusterStart)
     @(offset = clusterStart + (myCluster * clusterSize)){
-  abstract u8[] fullContent
+  abstract u8[] fullContent  // this is not ambiguous anymore, so maybe abstract keyword is not needed
   struct{
     // pending how to express this
     u16 nextCluster?(!= 0xFFF8)
