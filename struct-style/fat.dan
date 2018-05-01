@@ -8,8 +8,8 @@ def FORMAT : choice{
 }
 
 def FORMAT_ZIP: struct@(encoding = LittleIndian){
-  _: (struct{ ldf: LocalDeflatedFile.               // anonymous struct/choice types?
-             _: Token = parse(PNG.type, inflate(ldf.compressedData))
+  _: (struct{ ldf: LocalDeflatedFile               // anonymous struct/choice types?
+              _: Token = parse(PNG.type, inflate(ldf.compressedData))
             })[]
   entries: DirEntry[]
   _: EndOfDir                       // alternatively just: `EndOfDir` in place of `_:EndOfDir`
