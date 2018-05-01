@@ -81,17 +81,17 @@ struct DirectoryEntry(Type nestedFilesParser, BootSector bpe, int firstFat, int 
   Token fileEntry = parse(nestedFilesParser, fileData.fullContent[:fileSize])  // filterEntry has the top token type
  }
 
-choice FileCluster2(u16 nextCluster, u16 myCluster, u32 clusterSize, offset clusterStart){
+choice FileCluster2(u16 nextCluster, u16 myCluster, u32 clusterSize, offset clusterStart)
+    @(offset = clusterStart + (myCluster * clusterSize)){
   abstract u8[] fullContent
-  int whereToStart = clusterStart + (myCluster * clusterSize)
-  struct@(offset = wheretoStart){
+  struct{
     // pending how to express this
     u16 nextCluster?(!= 0xFFF8)
     u8[] fileContents[(myCluster * clusterSize) - 2]
     FileCluster nextFileCluster(nextCluster, clusterSize, clusterStart)
     u8[] fullContent = fileContents + nextFileCluster.fullContent
   }
-  struct @(offset = wheretoStart) {
+  struct{
     u16 nextCluster?(== 0xFFF8)
     u8[] fileContents[(myCluster * clusterSize) - 2]
     u8[] fullContent = fileContents
