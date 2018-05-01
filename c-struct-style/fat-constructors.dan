@@ -2,25 +2,16 @@ import SingleZip
 import PNG
 
 choice FORMAT{
-  FAT16Format fat16 = new(FORMAT.type)
-  SingleZipFormat zip = new() ;;  = new() is actually not needed (implicit)
-  PngFormat png
+  FAT16Format = #(FORMAT.type)
+  SingleZipFormat = #() ;;  = new() is actually not needed (implicit)
+  PngFormat png = #
 }
 
-// This is also sugar for:
-
-choice{
-  FAT16Format fat16 = new(FORMAT.type)
-  SingleZipFormat zip 
-  PngFormat png
-} FORMAT
-
-
 struct FORMAT_ZIP@(encoding = LittleIndian){
-  (struct{ 
-    LocalDeflatedFile               // anonymous struct/choice types?
+  (struct { 
+    LocalDeflatedFile  ldf             // anonymous struct/choice types?
     PNG = parse<PNG>(PNG.type, inflate(ldf.compressedData))
-   })[]
+   })[] _
   DirEntry[] entries
   EndOfDir                       // alternatively just: `EndOfDir` in place of `EndOfDir _`
 }
@@ -29,7 +20,7 @@ struct FAT16Format(Type format)t@(encoding = LittleIndian) {
 	Reserved Reserved
   BPB20 block = reserved.boot.block2_0 // types of derived things can be inferred
   FAT[] fatArea = new(block)[block.fatCount]
-  RootDirectory[] root = new(format, block, fatArea.offset, root.offset)[block.maxRootDirectoryEntryCount]
+  RootDirectory[] root[block.maxRootDirectoryEntryCount] = #(format, block, fatArea.offset, root.offset)
 }
 
 struct Reserved{
@@ -75,14 +66,15 @@ u8[] EmptyEntry = new[0x20]?(== 0x0 )
 native Token parse(Type typ, u8[] content) 
 
 struct DirectoryEntry(Type nestedFilesParser, BootSector bpe, int firstFat, int firstRoot){
-  u8[] shortFileName = new[8]
-  u8[] extension = new[3]
+  u8 shortFileName[8]
+  u8[] extension[3]
   u8 attributes
-  u8[] = new[2] // ignored fields
-  u16[] = new[6] // another way of ignoring fields
+  u8[] _[2] // ignored fields
+  u16[] _[6] // another way of ignoring fields
   u16 fileStartCluster
   u32 fileSize
-  FileCluster fileData = FileCluster(fileStartCluster, bpe.clusterSize, firstRoot + bpe.block_2_0.maxRootDirectoryEntryCount)
+  FileCluster fileData = #(fileStartCluster, bpe.clusterSize, firstRoot + bpe.block_2_0.maxRootDirectoryEntryCount)
+  
     
   // need to think about this syntax around nested parsing, and the cat & ranges syntax
 
