@@ -344,27 +344,27 @@ struct Block2@(offset=9){
 # Metal constructs mapped
 
 ## Tokens
-| Metal shorthand | Description | DSL |
+| Metal shorthand | Description | DAN |
 | --- | --- | --- |
-| `def(name, size)` | name a field with a size in bytes | `name : u8[size]` or `name: u32` |
-| `nod(size)` | a ignored set of bytes | `_ : u8[size]` or `u8[size]` |
-| `cho(name, list[Token])` | find the first token that parses successfully | `def name = choice { .. }` or inline as `x : choice { ... }` |
-| `rep(name, Token)` | name a field that repeats a token until it fails to parse | `name: T[]` |
-| `repn(name, Token, size)` | name a field that repeats a token n times | `name: T[n]` |
-| `seq(name, list[Token])` | define a sequence of tokens | `def name = struct { .. }` |
-| `sub(name, startAt, token)` | parse a token at a specific offset | `struct@(offset=startAt) { .. }` (not that this feature splits up the naming and the defining of the offset) |
+| `def(name, size)` | name a field with a size in bytes | `u8[size] name` or `u32 name` |
+| `nod(size)` | a ignored set of bytes | `u8[size] _`|
+| `cho(name, list[Token])` | find the first token that parses successfully | `choice name{ ... }`|
+| `rep(name, Token)` | name a field that repeats a token until it fails to parse | `T[] name` |
+| `repn(name, Token, size)` | name a field that repeats a token n times | `T[] name[n]` |
+| `seq(name, list[Token])` | define a sequence of tokens | `struct name{ ... }` |
+| `sub(name, startAt, token)` | parse a token at a specific offset | `struct@(offset=startAt) { ... }` (not that this feature splits up the naming and the defining of the offset) |
 | `pre(name, Token, predicate)` | unsure what it does | |
 | `post(name, Token, predicate)` | unsure what it does | |
 | `whl(name, Token, predicate)` | unsure what it does | |
 | `opt(name, Token)` | unsure what it does | |
-| `token(name)` | get a reference to a token "type" instead of a value | `T.type` (or `T.token`) |
-| `tie(name, Token, data)` | Run a token parser on the result of a data expression | `name: parse(Token, data)`|
+| `token(name)` | get a reference to a token "type" instead of a value | `T.type` |
+| `tie(name, Token, data)` | Run a token parser on the result of a data expression | |
 | `until(name, initialSize?, stepSize?, maxSize?, terminatorToken)` | unclear, the size params are all optional | |
 | `when(name, Token, predicate)` | unsure | |
 
 ## Expression
 
-| Metal shorthand | Description | DSL |
+| Metal shorthand | Description | DAN |
 | --- | --- | --- |
 | `add` | | `l + r` |
 | `div` | | `l / r` |
