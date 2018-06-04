@@ -23,7 +23,7 @@ def FAT16Format(format: Type): struct@(encoding = LittleIndian) {
 
 	fatArea: FAT(block) [block.fatCount] 
 
-	root: RootDirectory(format, block, fatArea.offset, root.offset) [block.maxRootDirectoryEntryCount]
+	root: RootDirectory[block.maxRootDirectoryEntryCount] = #(format, block, fatArea.offset, root.offset)
 }
 
 def Reserved : struct{
