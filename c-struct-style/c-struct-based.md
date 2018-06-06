@@ -30,7 +30,7 @@ import bar2
 ...
 ```
 
-The body of the module consists of a series of type definitions, that can be interpreted as parsers.  A program starts being executed by parsing a token/type definition such as:
+The body of the module consists of a series of type definitions, that can be interpreted as parsers.  A program starts being executed by parsing a stream of bytes using a token/type definition, such as:
 
 ```
 struct Name{
@@ -47,11 +47,11 @@ struct Info{
 }
 ```
 
-`Info` defines another type, that depends on `Name`. If we start the execution at `Info`, the result of that exe`Info` defines another type, that depends on `Name`. cution will be a data structure containing fields `name` of the user-defined type `Name`, and field `email` of the primitive type `u8[]`.
+`Info` defines another type, that depends on `Name`. If we start the execution at `Info`, the result of that execution will be a data structure containing fields `name` of the user-defined type `Name`, and field `email` of the primitive type `u8[]`.
 
 # Defining and using types in DAN
 
-In DAN, types can be either user-defined or primitive. In this section, we review the available primitive types and how to defined new user-defined types.
+In DAN, types can be either user-defined or primitive. In this section, we review the available primitive types and how to define new user-defined types.
 
 ## Primitive token types
 
@@ -94,7 +94,7 @@ They represent two bytes. The `u` and `s` types can be generalized to any multip
 u8[] twoBytes[2]
 ```
 
-The first component of this definition is the type of the field, in this case, a list of unsigned bytes, followed by the name of the field and then, optionally, the size of the array. In this case, `twoBytes` will exactly parse 2 bytes. Alternatively, we can write:
+The first component of this definition is the type of the field, in this case, a list of unsigned bytes, followed by the name of the field and then, optionally, the initial size of the list. In this case, `twoBytes` will exactly parse 2 bytes. Alternatively, we can write:
 
 ```
 u8[] aList
@@ -111,7 +111,7 @@ It defines field `a` of type `u8`. The value will only be assigned if at executi
 
 ## Struct types
 
-We know than we can also define structured data:
+We know than we can define structured data that enrich the set of available types with user-defined ones:
 
 ```
 struct Simple{
@@ -120,7 +120,7 @@ struct Simple{
 }
 ```
 
-Type `Simple` defines a composed type containing fields first and second. The double notion of type/parsing is more evident in the case of structs, in the sense that the fields' order matters. When used as a specification for parsing, `Simple` will first parse a byte that will be assigned to field `first`, and then two consecutive bytes that will be assigned to `second`.
+This definition introduces the user-defined type `Simple`, that corresponds to a composed type that contains fields first and second. The double notion of type/parsing is more evident in the case of structs, in the sense that the fields' order matters. When used as a specification for parsing, `Simple` will first parse a byte that will be assigned to field `first`, and then two consecutive bytes that will be assigned to `second`.
 
 
 ## Primitive non-token types
@@ -161,7 +161,7 @@ def DerivedExamle: struct{
 ```
 -->
 
-For readability purposes, it is sometimes preferable to separate the token fields from the derived ones, as the token ones ``define'' the parser. To do so, a dependency graph is calculated and therefore programmers can arrange the derived fields in any order. Coming back to the previous example:
+For readability purposes, it is sometimes preferable to separate the token fields from the derived ones, as the token ones ``define'' the parser. To do so, a dependency graph is calculated and therefore programmers can arrange the derived fields in any order. Coming back to the previous example, the following struct definitions are two valid alternative encodings:
 
 
 ```
@@ -202,9 +202,9 @@ choice AB{
 }
 ```
 
-Choice types imply backtracking. In this case, first an attempt to parse the input with type `A` will be made.  If this parsing does not succeed, then `B` will be tried, in strict declaration order. In other words, the disambiguation is driven by the parsing process. Note that the fields in a choice correspond to alternatives, therefore, they are not named.
+Choice types imply backtracking. In this case, an attempt to parse the input with type `A` will be made first. If this parsing does not succeed, then `B` will be tried, in strict declaration order. In other words, the disambiguation is driven by the parsing process. Note that the fields in a choice correspond to alternatives, therefore, they are not named.
 
-Notice too that despite both alternatives feature a field called content of type `u8`, this field is not accessible if we have a reference to a value of type `AB`. To make this explicit, we need to use _abstract fields_. An abstract field is a field declared inside a choice, whose implementation is abstract and must be defined in *each one of the alternatives*. Let us redefine `AB` using this concept:
+Notice too that despite both alternatives feature a field `content` of type `u8`, this field is not accessible if we have a reference to a value of type `AB`. To make this explicit, we need to use _abstract fields_. An abstract field is a field declared inside a choice, whose implementation is abstract and must be defined in *each one of the alternatives*. Let us redefine `AB` using this concept:
 
 ```
 choice AB2{
@@ -240,13 +240,15 @@ def DerivedChoice: choice{
 We can modularize programs by having parametric user-defined types:
 
 ```
-struct MustBeOfCertainAge(int age){
+struct MustBeOfCertainAge(int ageLimit){
 	u8[20] name
-	u8 age ? (this == age)
+	u8 age ? (this == ageLimit)
 }
 ```
 
-In this case, `MustBeOfCertainAge` acts as a constructor receiving one integer argument. We can use this definition, for instance, at a field definition:
+In this case, `MustBeOfCertainAge` acts as a constructor receiving one integer argument. 
+
+In order to build parsers conforming to this definition we need to parameterize the construction of values of this type. Consider, for instance, this field declaration:
 
 ```
 MustBeOfCertainAge person(18)
@@ -254,10 +256,13 @@ MustBeOfCertainAge person(18)
 
 This field definition instantiate the `MustBeOfCertainAge` struct definition for the concrete argument `18`.
 
+## Implicit coercions
 
+In the previous example, notice the equality check performed in the field `age` declaration within the `MustBeOfCertainAge` definition. We are comparing `this` (which refers to the field `age` of type `u8` with `ageLimit`, defined as an `int` parameter. This comparison works because there is an implicit cohercion from the type `u8` to the type `int`. Primitive token types, such as `u` types, `s` types, or list types containing them, can be coerced to primitive non-token type, such as `string` or `int` by using some implicit encoding conventions. To alter these coventions, we can use "meta properties", explained below.
+ 
 ## Anonymous fields
 
-Sometimes, a field is needed just for parsing purposes but it does not really need to have a named assigned (and thus, it is not semantically a field). In that case, we can use the field name `_`:
+Sometimes, a field is needed just for parsing purposes but it does not really need to have a named assigned. In that case, we can use the field name `_`, which means to ignore that field when accessing the fields of a value of such type:
 
 ```
 def Ignoring: struct{
@@ -270,7 +275,7 @@ def Ignoring: struct{
 
 ## Inline user-defined types
 
-In the choice example, for defining types `AB` and `AB2` we also needed to define types `A` and `B`, exclusively in order to define the alternatives of the choice. In these situations, it is more convenient to inline the struct definitions, as shown here:
+In the choice example, for defining types `AB` and `AB2` we also needed to define types `A` and `B`, exclusively in order to define the alternatives of the choice. In these situations, it might be more convenient to inline the struct definitions, as shown here:
 
 
 ```
@@ -289,7 +294,7 @@ The same applies for a struct definition, for example:
 
 ```
 struct Info2{
-	struct Name{
+	struct{
 		u8[] firstName[20]
 		u8[] secondName[20]
 	} name
@@ -335,11 +340,6 @@ struct Block2@(offset=9){
     // parsing pointers is at position 13
 }
 ```
-
-## Type cohercions
-
-...
-
 
 # Metal constructs mapped
 
