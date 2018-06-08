@@ -1,6 +1,10 @@
 # DAN Proposal
 
-DAN is a domain-specific language for parsing binary data.
+The Netherlands Forensic Institute (NFI) is the national forensics institute of the Netherlands. The role of the NFI has been quickly evolving in the past years due to digitalization. It has thus become increasingly necessary to be able to extract information from incomplete sources: either damaged physical devices, deliberately erased data, etc. In this context, file carving, that is, the systematic attempt to recognize data according to some format specifications, is fundamental.
+
+The current file carving technology used in NFI is the "Metal" framework, that abstracts the complexities of parsing binary data, providing a Java API. To date, "Metal" has helped NFI developers to specify a number of data formats in a more user-friendly manner. There is, however, some opportunities for improvement. In particular, the way references are managed within the framework make dependencies difficult to reason about. Also, by using the API, developers create a layer of dynamically typed code on top of statically typed Java, which prevents the detection of type errors at compile time. To minimize these drawbacks, but at the same time reuse and learn from the effort put into "Metal", we propose DAN, a typed domain-specific language, sitting on top of ``Metal'' as a higher level layer of abstraction.
+
+DAN is a domain-specific language for parsing binary data in which each token definition has its own type. User can define new structured types that correspond to parsers, making the process of encoding new binary specifications less error-prone. To execute these specifications, DAN generates calls to the "Metal" API, reusing the knowledge encoded in that library. The present document explores the main features of the current design of DAN.
 
 ## Types
 
@@ -163,7 +167,7 @@ def DerivedExamle: struct{
 ```
 -->
 
-For readability purposes, it is sometimes preferable to separate the token fields from the derived ones, as the token ones ``define'' the parser. To do so, a dependency graph is calculated and therefore programmers can arrange the derived fields in any order. Coming back to the previous example, the following struct definitions are two valid alternative encodings:
+For readability purposes, it is sometimes preferable to separate the token fields from the derived ones, as the token ones "define" the parser. To do so, a dependency graph is calculated and therefore programmers can arrange the derived fields in any order. Coming back to the previous example, the following struct definitions are two valid alternative encodings:
 
 
 ```
