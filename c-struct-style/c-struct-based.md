@@ -6,23 +6,6 @@ The current file carving technology used in NFI is the "Metal" framework, that a
 
 DAN is a domain-specific language for parsing binary data in which each token definition has its own type. User can define new structured types that correspond to parsers, making the process of encoding new binary specifications less error-prone. To execute these specifications, DAN generates calls to the "Metal" API, reusing the knowledge encoded in that library. The present document explores the main features of the current design of DAN.
 
-## Types
-
-This is DAN's type lattice:
-
-						
-
-	    	         token         bool     int    string   array
-                       |
-        ---------------------------------------------
-        |               |        |     |      |     |
-     user-defined       u4      u8    u16    u32   u64
-    
-
-User-defined types are those defined via the `struct` or `choice` keyword.
-
-Notice there are token types and simple types such as `bool, int, string`. Only descendants of `token` act also as parsers. This distinction is important, as allows us to create useful data structures that do not dependent on parsing.
-
 # Execution model
 
 A program consists of one or more modules. A module, thus, starts with a declaration of its name, followed by the modules it depends on:
@@ -55,9 +38,14 @@ struct Info{
 
 `Info` defines another type, that depends on `Name`. If we start the execution at `Info`, the result of that execution will be a data structure containing fields `name` of the user-defined type `Name`, and field `email` of the primitive type `u8[]`.
 
-# Defining and using types in DAN
 
-In DAN, types can be either user-defined or primitive. In this section, we review the available primitive types and how to define new user-defined types.
+## Types
+
+The main metaphor in DAN is that types correspond to parsers. However, for computation purposes, we also need plain types that are not associated to any parsing process. Therefore, we can distinguish non-token types such as `string`, `int`, `bool`, and token types such as `u8` (unsigned byte), `s8` (signed byte), `u16` (unsigned 16-bit word), `s128` (unsigned 128-bit word), etc. Both kinds of types can be aggregated in list types, specified as `T[]`, where `T` is a type, e.g.: `int[]`, `string[]`, `u8[]`. Notice that that the latter example is a list that is composed of token types, and therefore is also considered to be a token type.
+
+Besides the aforementioned primitive types, user can define their own (token) types via `struct` or `choice` declarations.
+
+In this section, we review in detail the available primitive types and how to define new user-defined types.
 
 ## Primitive token types
 
@@ -94,7 +82,7 @@ u16 twoUnignedBytes
 u16 twoSignedBytes
 ```
 
-They represent two bytes. The `u` and `s` types can be generalized to any multiple of 8, e.g. `u256` `s64`. An alternative way of defining sequential data is using lists:
+They represent a 16-bit word (or a 2-byte word). The `u` and `s` types can be generalized to any multiple of 8, e.g. `u256` `s64`. An alternative way of defining sequential data is using lists:
 
 ```
 u8[] twoBytes[2]
