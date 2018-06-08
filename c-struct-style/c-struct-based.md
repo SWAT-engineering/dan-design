@@ -39,7 +39,7 @@ struct Info{
 `Info` defines another type, that depends on `Name`. If we start the execution at `Info`, the result of that execution will be a data structure containing fields `name` of the user-defined type `Name`, and field `email` of the primitive type `u8[]`.
 
 
-## Types
+# Types
 
 The main metaphor in DAN is that types correspond to parsers. However, for computation purposes, we also need plain types that are not associated to any parsing process. Therefore, we can distinguish non-token types such as `string`, `int`, `bool`, and token types such as `u8` (unsigned byte), `s8` (signed byte), `u16` (unsigned 16-bit word), `s128` (unsigned 128-bit word), etc. Both kinds of types can be aggregated in list types, specified as `T[]`, where `T` is a type, e.g.: `int[]`, `string[]`, `u8[]`. Notice that that the latter example is a list that is composed of token types, and therefore is also considered to be a token type.
 
