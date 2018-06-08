@@ -1,4 +1,6 @@
-# DAN Proposal: Struct Style
+# DAN Proposal
+
+DAN is a domain-specific language for parsing binary data.
 
 ## Types
 
@@ -10,7 +12,7 @@ This is DAN's type lattice:
                        |
         ---------------------------------------------
         |               |        |     |      |     |
-     user-define       u4      u8    u16    u32   u64
+     user-defined       u4      u8    u16    u32   u64
     
 
 User-defined types are those defined via the `struct` or `choice` keyword.
@@ -38,7 +40,7 @@ struct Name{
 	u8[] secondName[20]
 }
 ```
-`Name` defines a composed type and also specifies a parser. If we start the execution at `Name`, the result of that execution/parsing will be a data structure containing fields `name` and `email`. Consider another example of a type definition:
+`Name` defines a composed type and also specifies a parser. If we start the execution at `Name`, the result of that execution/parsing will be a data structure containing fields `firstName` and `secondName`. Consider another example of a type definition:
 
 ```
 struct Info{
@@ -204,7 +206,7 @@ choice AB{
 
 Choice types imply backtracking. In this case, an attempt to parse the input with type `A` will be made first. If this parsing does not succeed, then `B` will be tried, in strict declaration order. In other words, the disambiguation is driven by the parsing process. Note that the fields in a choice correspond to alternatives, therefore, they are not named.
 
-Notice too that despite both alternatives feature a field `content` of type `u8`, this field is not accessible if we have a reference to a value of type `AB`. To make this explicit, we need to use _abstract fields_. An abstract field is a field declared inside a choice, whose implementation is abstract and must be defined in *each one of the alternatives*. Let us redefine `AB` using this concept:
+Notice too that despite both alternatives featuring a field `content` of type `u8`, this field is not accessible if we have a reference to a value of type `AB`. In order to do this, we need to use _abstract fields_. An abstract field is a field declared inside a choice, whose implementation is abstract and must be defined in *each one of the alternatives*. Let us redefine `AB` using this concept:
 
 ```
 choice AB2{
@@ -265,7 +267,7 @@ In the previous example, notice the equality check performed in the field `age` 
 Sometimes, a field is needed just for parsing purposes but it does not really need to have a named assigned. In that case, we can use the field name `_`, which means to ignore that field when accessing the fields of a value of such type:
 
 ```
-def Ignoring: struct{
+struct Ignoring{
 	   u8[20] name
 	   u8 _ ? (this == ' ') // there must be a space after the name, but we do not name it
 	   u16 age
@@ -302,7 +304,7 @@ struct Info2{
 }
 ```
 
-In order to access the `firstName` field of the inner struct, assuming that we have a variable `i` of type `Info2`, we need to write `i.name.firstName`.
+In order to access the `firstName` field of the inner struct, assuming that we have a variable `i` of type `Info2`, we need to write `anInfo2.name.firstName`.
 
 
 # Meta properties
@@ -310,8 +312,8 @@ In order to access the `firstName` field of the inner struct, assuming that we h
 Properties that have to do with how to parse the token types are represented as annotations at the declaration level:
 
 ```
-def Block: struct@(encoding=LittleIndian){
-	content: u8[]
+struct Block@(encoding=LittleIndian){
+	u8[] content
 }
 ```
 
@@ -336,12 +338,12 @@ struct Root {
 
 struct Block2@(offset=9){
     // parsing pointers is at position 9
-    content: u8[4]
+    u8[4] content
     // parsing pointers is at position 13
 }
 ```
 
-# Metal constructs mapped
+# Metal constructs mapped to DAN
 
 ## Tokens
 | Metal shorthand | Description | DAN |
@@ -353,10 +355,10 @@ struct Block2@(offset=9){
 | `repn(name, Token, size)` | name a field that repeats a token n times | `T[] name[n]` |
 | `seq(name, list[Token])` | define a sequence of tokens | `struct name{ ... }` |
 | `sub(name, startAt, token)` | parse a token at a specific offset | `struct@(offset=startAt) { ... }` (note that this feature splits up the naming and the defining of the offset) |
-| `pre(name, Token, predicate)` | unsure what it does | |
-| `post(name, Token, predicate)` | unsure what it does | |
-| `whl(name, Token, predicate)` | unsure what it does | |
-| `opt(name, Token)` | unsure what it does | |
+| `pre(name, Token, predicate)` | to be determined | |
+| `post(name, Token, predicate)` | to be determined | |
+| `whl(name, Token, predicate)` | to be determined | |
+| `opt(name, Token)` | to be determined | |
 | `token(name)` | get a reference to a token "type" instead of a value | `T.type` |
 | `tie(name, Token, data)` | Run a token parser on the result of a data expression | `u8[] name = parse(token, data)` (`parse` is a native function of signature `u8[] parse(typ tokenType, u8[] data)`)|
 | `until(name, initialSize?, stepSize?, maxSize?, terminatorToken)` | unclear, the size params are all optional | |
