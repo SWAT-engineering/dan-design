@@ -116,7 +116,6 @@ struct Simple{
 
 This definition introduces the user-defined type `Simple`, that corresponds to a composed type that contains fields first and second. The double notion of type/parsing is more evident in the case of structs, in the sense that the fields' order matters. When used as a specification for parsing, `Simple` will first parse a byte that will be assigned to field `first`, and then two consecutive bytes that will be assigned to `second`.
 
-
 ## Primitive non-token types
 
 Not every type is parseable. Non-token types allow us to represent common primitive values that are not attached to a particular byte representation, such as strings, integers or booleans. As they do not define parsers, fields of a non-token type need to be initialized at the moment of declaration, for example:
@@ -183,11 +182,11 @@ We can also define choice types:
 
 ```
 struct A{
-	u8 content ? (u8 == "A")
+	u8 content ? (this == "A")
 }
 
 struct B{
-	u8 content ? (u8 == "B")
+	u8 content ? (this == "B")
 }
 
 choice AB{
@@ -229,6 +228,11 @@ def DerivedChoice: choice{
 }
 ```-->
 
+## Implicit coercions
+
+In the previous example, notice the equality check performed in the `content` declarations . We are comparing `this` (which refers to the field `content` of type `u8` with string literals ("A" and "B"), of type `string`. This comparison works because there is an implicit cohercion from the type `u8` to the type `string`. Primitive token types, such as `u` types, `s` types, or list types containing them, can be coerced to primitive non-token type, such as `string` or `int` by using some implicit encoding conventions. To alter these coventions, we can use "meta properties", explained below.
+
+
 ## Constructors of user-defined types
 
 We can modularize programs by having parametric user-defined types:
@@ -249,10 +253,6 @@ MustBeOfCertainAge person(18)
 ```
 
 This field definition instantiate the `MustBeOfCertainAge` struct definition for the concrete argument `18`.
-
-## Implicit coercions
-
-In the previous example, notice the equality check performed in the field `age` declaration within the `MustBeOfCertainAge` definition. We are comparing `this` (which refers to the field `age` of type `u8` with `ageLimit`, defined as an `int` parameter. This comparison works because there is an implicit cohercion from the type `u8` to the type `int`. Primitive token types, such as `u` types, `s` types, or list types containing them, can be coerced to primitive non-token type, such as `string` or `int` by using some implicit encoding conventions. To alter these coventions, we can use "meta properties", explained below.
  
 ## Anonymous fields
 
