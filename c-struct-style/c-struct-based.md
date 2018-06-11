@@ -88,20 +88,22 @@ They represent a 16-bit word (or a 2-byte word). The `u` and `s` types can be ge
 u8[] twoBytes[2]
 ```
 
-The first component of this definition is the type of the field, in this case, a list of unsigned bytes, followed by the name of the field and then, optionally, the initial size of the list. In this case, `twoBytes` will exactly parse 2 bytes. Alternatively, we can write:
+The first component of this definition is the type of the field, in this case, a list of unsigned bytes, followed by the name of the field and then, optionally, the size of the list. In this case, `twoBytes` will exactly parse 2 bytes. Alternatively, we can write:
 
 ```
 u8[] aList
 ```
 
-Field `aList` will contain a sequence of bytes of arbitrary length.
+Field `aList` will contain a sequence of bytes of arbitrary length. (if this is parsed, it will consume all remaining bytes in the data stream)
 
 Field definitions can also include conditions 
 ```
 u8 a ?(this != 65)
 ```
 
-It defines field `a` of type `u8`. The value will only be assigned if at execution time, the parsed byte is not equal to 65, or, from another perspective, the parsed character is different from `A` (the character corresponding to 65). Notice that the special variable `this` in the condition refers to the field currently being defined.
+It defines field `a` of type `u8`. The value will only be assigned if at execution time, the parsed byte is not equal to 65, or, from another perspective, the parsed character is different from `A` (the character corresponding to 65). Notice that the special variable `this` in the condition refers to the field currently being defined. 
+
+_TODO: should we discuss the parsing semantics of a failed condition here?_
 
 ## Struct types
 
@@ -137,7 +139,7 @@ struct DerivedExample{
 }
 ```
 
-**Important:**  all array types have an implicit `length` field, and all token types, an implicit `offset` field.
+**Important:**  all list types have an implicit `length` field, and all token types, an implicit `offset` field.
 
 <!--A derived attribute can also be of a token type, working as an alias. The key distinctive syntactic feature in these cases is, again, the use of `=`:
 
@@ -159,7 +161,7 @@ For readability purposes, it is sometimes preferable to separate the token field
 
 ```
 struct DerivedExample2{
-	u8[3] token1
+	u8[] token1[3]
 	u8[] token2
 	
 	int offset1 = token1.offset
@@ -170,7 +172,7 @@ struct DerivedExample3{
 	int offset1 = token1.offset
 	int length2 = token2.length
 		
-	u8[3] token1
+	u8[] token1[3]
 	u8[] token2
 }
 ```
@@ -190,8 +192,8 @@ struct B{
 }
 
 choice AB{
-	A a
-	B b
+	A
+	B
 }
 ```
 
@@ -202,8 +204,8 @@ Notice too that despite both alternatives featuring a field `content` of type `u
 ```
 choice AB2{
 	abstract u8 content
-	A a
-	B b
+	A
+	B
 }
 ```
 
@@ -239,7 +241,7 @@ We can modularize programs by having parametric user-defined types:
 
 ```
 struct MustBeOfCertainAge(int ageLimit){
-	u8[20] name
+	u8[] name[20]
 	u8 age ? (this == ageLimit)
 }
 ```
@@ -260,10 +262,10 @@ Sometimes, a field is needed just for parsing purposes but it does not really ne
 
 ```
 struct Ignoring{
-	   u8[20] name
+	   u8[] name[20]
 	   u8 _ ? (this == ' ') // there must be a space after the name, but we do not name it
 	   u16 age
-	   u8 _ ? (this == ' ') // there must be a space after the age, but we do not name it
+	   u8[] _[4] ? (this == '     ') // there must be four spaces after the age, but we do not name it
    }
 ```
 
@@ -305,11 +307,12 @@ Properties that have to do with how to parse the token types are represented as 
 
 ```
 struct Block@(encoding=LittleIndian){
-	u8[] content
+	u32 content ?(this == 0xDEADBEEF )
+	u8[] content[4] ?(this == 0xCAFEBEEF)
 }
 ```
 
-This means that Little Indian will be the encoding used for parsing content to produce a value of type `Block`.
+This means that Little Indian will be the encoding used for parsing content to produce a value of type `Block`. 
 
 Another meta-property is `offset`, that creates a new parsing pointer (disconnected from the context) and moves that parsing pointer to the specific (absolute) offset. If omitted, the default is to advance the normal pointer of the parent. Here an example where we start parsing from the 10th byte on:
 
@@ -330,7 +333,7 @@ struct Root {
 
 struct Block2@(offset=9){
     // parsing pointers is at position 9
-    u8[4] content
+    u8[] content[4]
     // parsing pointers is at position 13
 }
 ```
@@ -340,15 +343,15 @@ struct Block2@(offset=9){
 ## Tokens
 | Metal shorthand | Description | DAN |
 | --- | --- | --- |
-| `def(name, size)` | name a field with a size in bytes | `u8[size] name` or `u32 name` |
-| `nod(size)` | a ignored set of bytes | `u8[size] _`|
+| `def(name, size)` | name a field with a size in bytes | `u8[] name[size]` or `u32 name` |
+| `nod(size)` | a ignored set of bytes | `u8[] _[size]`|
 | `cho(name, list[Token])` | find the first token that parses successfully | `choice name{ ... }`|
 | `rep(name, Token)` | name a field that repeats a token until it fails to parse | `T[] name` |
 | `repn(name, Token, size)` | name a field that repeats a token n times | `T[] name[n]` |
 | `seq(name, list[Token])` | define a sequence of tokens | `struct name{ ... }` |
-| `sub(name, startAt, token)` | parse a token at a specific offset | `struct@(offset=startAt) { ... }` (note that this feature splits up the naming and the defining of the offset) |
+| `sub(name, startAt, token)` | parse a token at a specific offset | `struct@(offset=startAt) name { ... }`  |
 | `pre(name, Token, predicate)` | to be determined | |
-| `post(name, Token, predicate)` | to be determined | |
+| `post(name, Token, predicate)` | `token name ?(pedicate)` | |
 | `whl(name, Token, predicate)` | to be determined | |
 | `opt(name, Token)` | to be determined | |
 | `token(name)` | get a reference to a token "type" instead of a value | `T.type` |
@@ -382,13 +385,13 @@ struct Block2@(offset=9){
 | `nth(l, i)` | nth element of the list/array | `l[i]` |
 | `offset(reference name)` | get the absolute offset of something that has already been parsed | `n.offset` (without dynamic scoping aspect) |
 | `cat(a, b)` | concat the bytes together of two parsed trees | `a + b` |
-| `elvis(v, orElse)` | a bit unclear what it exactly does, as it's mixed with the everything is a list concept of metal | |
-| `count(t)` | the size of  a list | unclear, as we've removed the concepts of lists |
-| `foldLeft(values, reducer, initial?)` | unclear if still needed after removing lists concept | |
-| `foldRight(values, reducer, initial?)` | unclear if still needed after removing lists concept | |
-| `fold(values, reducer, initial?)` | unclear if still needed after removing lists concept | |
-| `mapLeft(values, mapper, left, rightExpand)` | unclear if still needed after removing lists concept | |
-| `mapRight(values, mapper, leftExpand, right)` | unclear if still needed after removing lists concept | |
-| `rev(values)` | reverse a list | unclear if still needed |
+| `elvis(v, orElse)` | still need to design this | |
+| `count(t)` | the size of  a list | unclear of the difference to length. |
+| `foldLeft(values, reducer, initial?)` | still need to be designed | |
+| `foldRight(values, reducer, initial?)` | still need to be designed | |
+| `fold(values, reducer, initial?)` | still need to be designed | |
+| `mapLeft(values, mapper, left, rightExpand)` | still need to be designed | |
+| `mapRight(values, mapper, leftExpand, right)` | still need to be designed | |
+| `rev(values)` | reverse a list | still need to be designed, might be less needed since references aren't lists anymore |
 | `exp(base, count)` | repeat (expand) `base` `count` times | missing, maybe something with slices? |
 | `bytes(x)` | get the bytes represented by something | automatic cohercion solves this |
