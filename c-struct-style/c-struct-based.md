@@ -1,6 +1,6 @@
 # DAN Proposal
 
-The Netherlands Forensic Institute (NFI) is the national forensics institute of the Netherlands. The role of the NFI has been quickly evolving in the past years due to digitalization. It has thus become increasingly necessary to be able to extract information from incomplete sources: either damaged physical devices, deliberately erased data, etc. In this context, file carving, that is, the systematic attempt to recognize data according to some format specifications, is fundamental.
+The Netherlands Forensic Institute (NFI) is the national forensics institute of the Netherlands. Due to advance of digitalization in all layers of society, the role of the NFI has been quickly evolving in the past years. It has thus become increasingly necessary to be able to extract information from incomplete sources: either damaged physical devices, deliberately erased data, etc. In this context, file carving, that is, the systematic attempt to recognize data according to some format specifications, is fundamental.
 
 The current file carving technology used in NFI is the "Metal" framework, that abstracts the complexities of parsing binary data, providing a Java API. To date, "Metal" has helped NFI developers to specify a number of data formats in a more user-friendly manner. There is, however, some opportunities for improvement. In particular, the way references are managed within the framework make dependencies difficult to reason about. Also, by using the API, developers create a layer of dynamically typed code on top of statically typed Java, which prevents the detection of type errors at compile time. To minimize these drawbacks, but at the same time reuse and learn from the effort put into "Metal", we propose DAN, a typed domain-specific language, sitting on top of ``Metal'' as a higher level layer of abstraction.
 
@@ -298,6 +298,53 @@ struct Info2{
 
 In order to access the `firstName` field of the inner struct, assuming that we have a variable `i` of type `Info2`, we need to write `anInfo2.name.firstName`.
 
+# Parsing
+
+Sometimes it is necessary to write generic code that is independent of one specific format specification. In those cases, we can use the `parsingWith` conditional expression, that parses the current stream according to a token type specified as a type paramerer. We have not discussed type parameters in this document as this is a feature we will add in a next iteration. Consider this example:
+
+```
+struct Digit{
+	u8 a ?(this >=0 || this <=9)
+}
+
+struct TwoXs<X>{
+	X firstX parsingWith<X>
+	X secondX  parsingWith<X>
+}
+
+struct Simple{
+	TwoXs<Digit> as
+}
+```
+
+# Functions
+
+We provide a simple mechanism for reuse through functions. A function allows to abstract over common pattern of computations. Consider the standard squaring example:
+
+```
+int square(int x) = x * x
+```
+
+Having added this definition, we can now reuse this behavior when defininf a type:
+
+```
+struct Foo{
+	u8 bar
+	int x2 = square(bar)
+}
+```
+
+If more sophisticated behavior is required, we can declare "function bridges", that is, declare the signature of a function annotated with an Java implementation:
+
+```
+@(org.foo.VeryComplexEncoding)
+int veryComplexEncoding(int x)
+
+struct Foo2{
+	u8 bar
+	int x = veryComplexEncoding(bar)
+}
+```
 
 # Meta properties
 
