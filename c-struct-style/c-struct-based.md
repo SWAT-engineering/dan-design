@@ -1,10 +1,10 @@
-# DAN Proposal
+# DAN -- A Domain-specific Language for Anonymization
 
 The Netherlands Forensic Institute (NFI) is the national forensics institute of the Netherlands. Due to advance of digitalization in all layers of society, the role of the NFI has been quickly evolving in the past years. It has thus become increasingly necessary to be able to extract information from incomplete sources: either damaged physical devices, deliberately erased data, etc. In this context, file carving, that is, the systematic attempt to recognize data according to some format specifications, is fundamental.
 
 The current file carving technology used in NFI is the "Metal" framework, that abstracts the complexities of parsing binary data, providing a Java API. To date, "Metal" has helped NFI developers to specify a number of data formats in a more user-friendly manner. There is, however, some opportunities for improvement. In particular, the way references are managed within the framework make dependencies difficult to reason about. Also, by using the API, developers create a layer of dynamically typed code on top of statically typed Java, which prevents the detection of type errors at compile time. To minimize these drawbacks, but at the same time reuse and learn from the effort put into "Metal", we propose DAN, a typed domain-specific language, sitting on top of ``Metal'' as a higher level layer of abstraction.
 
-DAN is a domain-specific language for parsing binary data in which each token definition has its own type. User can define new structured types that correspond to parsers, making the process of encoding new binary specifications less error-prone. To execute these specifications, DAN generates calls to the "Metal" API, reusing the knowledge encoded in that library. The present document explores the main features of the current design of DAN.
+DAN (Domain-specific Language for Anonymization) is a domain-specific language for parsing binary data and was originally designed for anonymization of data. In DAN each token definition has its own type. Users can define new structured types that correspond to parsers, making the process of encoding new binary specifications less error-prone. To execute these specifications, DAN generates calls to the "Metal" API, reusing the knowledge encoded in that library. The present document is still a draft and explores the main features of the current design of DAN.
 
 # Execution model
 
