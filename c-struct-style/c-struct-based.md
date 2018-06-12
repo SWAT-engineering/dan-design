@@ -436,7 +436,7 @@ struct Block2@(offset=9){
 | `count(t)` | the size of  a list | unclear of the difference to length. |
 | `foldLeft(values, reducer, initial?)` | still need to be designed | |
 | `foldRight(values, reducer, initial?)` | still need to be designed | |
-| `fold(values, reducer, initial?)` | still need to be designed | |
+| `fold(values, reducer, initial?)` | still need to be designed | `(T initial | reducer | x <- values)` (reducer is an expression that has in scope both the special variable `it` , representing the accumulator, and variable `x` representing the current element being processed; the result of this expression is of type `T`) |
 | `mapLeft(values, mapper, left, rightExpand)` | still need to be designed | |
 | `mapRight(values, mapper, leftExpand, right)` | still need to be designed | |
 | `rev(values)` | reverse a list | still need to be designed, might be less needed since references aren't lists anymore |
