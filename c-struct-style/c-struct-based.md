@@ -428,7 +428,7 @@ struct Block2@(offset=9){
 | `or` |  boolean or | `l && r` |
 | `eq* | comparision operators | default comparison operators |
 | `con` | constants | literal syntax for arbitrary precision ints, strings, arrays |
-| `len(l)` |  | `l.length` |
+| `len(l)` | the size of a token | `aToken.size` |
 | `ref(name)` | create a list of all instances of something with that name | `x.name` (however, it's not dynamic scoping anymore) |
 | `first(l)` | first element of the list/array | `l[0]` |
 | `last(l)` | last element of the list/array | `l[-1]` or `l[l.length - 1]` |
@@ -436,7 +436,7 @@ struct Block2@(offset=9){
 | `offset(reference name)` | get the absolute offset of something that has already been parsed | `n.offset` (without dynamic scoping aspect) |
 | `cat(a, b)` | concat the bytes together of two parsed trees | `a + b` |
 | `elvis(v, orElse)` | still need to design this | |
-| `count(t)` | the size of  a list | unclear of the difference to length. |
+| `count(t)` | the size of  a list | `aList.length` |
 | `foldLeft(values, reducer, initial?)` | still need to be designed | |
 | `foldRight(values, reducer, initial?)` | still need to be designed | |
 | `fold(values, reducer, initial?)` | still need to be designed | `(T initial | reducer | x <- values)` (reducer is an expression that has in scope both the special variable `it` , representing the accumulator, and variable `x` representing the current element being processed; the result of this expression is of type `T`) |
