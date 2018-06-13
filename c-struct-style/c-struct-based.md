@@ -322,7 +322,7 @@ struct Simple{
 }
 ```
 
-Similarly, when we just want to have a parameteric field in the structure, you can also use it directly. So `TwoXs` could also have been written like:
+<!--Similarly, when we just want to have a parameteric field in the structure, you can also use it directly. So `TwoXs` could also have been written like:
 
 ```
 struct TwoXs<X>{
@@ -330,7 +330,7 @@ struct TwoXs<X>{
 	X secondX
 }
 ```
-
+-->
 # Functions
 
 We provide a simple mechanism for reuse through functions. A function allows to abstract over common pattern of computations. Consider the standard squaring example:
