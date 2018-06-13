@@ -302,7 +302,7 @@ In order to access the `firstName` field of the inner struct, assuming that we h
 
 # Parsing
 
-Sometimes it is necessary to write generic code that is independent of one specific format specification. In those cases, we can use the `parse` expression, that parses a given list of bytes according to a token type specified as a type paramerer. We have not discussed type parameters in this document as this is a feature we will add in a next iteration. Consider this example, illustrating the use of `parse`:
+Sometimes it is necessary to write generic code that is independent of one specific format specification. In those cases, we want to have parameterized parsing (`tie` in metal). For this, we can use the `parse` expression, that parses a given list of bytes according to a token type specified as a type parameter. We have not discussed type parameters in this document as this is a feature we will add in a next iteration. Consider this example, illustrating the use of `parse`:
 
 ```
 struct Digit{
@@ -313,12 +313,21 @@ struct TwoXs<X>{
 	u8[] first
 	u8[] second
 	X firstX = parse<X>(first)
-	X secondX  parse<X>(second)
+	X secondX =  parse<X>(second)
 }
 
 struct Simple{
 	TwoXs<Digit> as
 	X oneX = as.firstX
+}
+```
+
+Similarly, when we just want to have a parameteric field in the structure, you can also use it directly. So `TwoXs` could also have been written like:
+
+```
+struct TwoXs<X>{
+	X firstX
+	X secondX
 }
 ```
 
@@ -370,21 +379,21 @@ Another meta-property is `offset`, that creates a new parsing pointer (disconnec
 struct Root {
     // parsing pointer is at position 0
     u8 oneByte
-    // parsing pointers is at position 1
+    // parsing pointer is at position 1
     u32 oneInt
-    // parsing pointers is at position 5
+    // parsing pointer is at position 5
     Block2 sim
-    // parsing pointers is at position 5
+    // parsing pointer is at position 5
     Block2 sim
-    // parsing pointers is at position 5
+    // parsing pointer is at position 5
     u8 oneByte
-    // parsing pointers is at position 6
+    // parsing pointer is at position 6
 }
 
 struct Block2@(offset=9){
-    // parsing pointers is at position 9
+    // parsing pointer is at position 9
     u8[] content[4]
-    // parsing pointers is at position 13
+    // parsing pointer is at position 13
 }
 ```
 
@@ -428,7 +437,7 @@ struct Block2@(offset=9){
 | `or` |  boolean or | `l && r` |
 | `eq* | comparision operators | default comparison operators |
 | `con` | constants | literal syntax for arbitrary precision ints, strings, arrays |
-| `len(l)` |  | `l.length` |
+| `len(l)` | amount of bytes in a token (check if correct) | `l.size` |
 | `ref(name)` | create a list of all instances of something with that name | `x.name` (however, it's not dynamic scoping anymore) |
 | `first(l)` | first element of the list/array | `l[0]` |
 | `last(l)` | last element of the list/array | `l[-1]` or `l[l.length - 1]` |
@@ -436,7 +445,7 @@ struct Block2@(offset=9){
 | `offset(reference name)` | get the absolute offset of something that has already been parsed | `n.offset` (without dynamic scoping aspect) |
 | `cat(a, b)` | concat the bytes together of two parsed trees | `a + b` |
 | `elvis(v, orElse)` | still need to design this | |
-| `count(t)` | the size of  a list | unclear of the difference to length. |
+| `count(t)` | amount of elemens in a list a list | `l.length` |
 | `foldLeft(values, reducer, initial?)` | still need to be designed | |
 | `foldRight(values, reducer, initial?)` | still need to be designed | |
 | `fold(values, reducer, initial?)` | still need to be designed | `(T initial \| reducer \| x <- values)` (reducer is an expression that has in scope both the special variable `it` , representing the accumulator, and variable `x` representing the current element being processed; the result of this expression is of type `T`) |
