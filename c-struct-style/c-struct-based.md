@@ -302,7 +302,7 @@ In order to access the `firstName` field of the inner struct, assuming that we h
 
 # Parsing
 
-Sometimes it is necessary to write generic code that is independent of one specific format specification. In those cases, we can use the `parsingWith` conditional expression, that parses the current stream according to a token type specified as a type paramerer. We have not discussed type parameters in this document as this is a feature we will add in a next iteration. Consider this example:
+Sometimes it is necessary to write generic code that is independent of one specific format specification. In those cases, we can use the `parse` expression, that parses a given list of bytes according to a token type specified as a type paramerer. We have not discussed type parameters in this document as this is a feature we will add in a next iteration. Consider this example, illustrating the use of `parse`:
 
 ```
 struct Digit{
@@ -310,12 +310,15 @@ struct Digit{
 }
 
 struct TwoXs<X>{
-	X firstX parsingWith<X>
-	X secondX  parsingWith<X>
+	u8[] first
+	u8[] second
+	X firstX = parse<X>(first)
+	X secondX  parse<X>(second)
 }
 
 struct Simple{
 	TwoXs<Digit> as
+	X oneX = as.firstX
 }
 ```
 
@@ -327,7 +330,7 @@ We provide a simple mechanism for reuse through functions. A function allows to 
 int square(int x) = x * x
 ```
 
-Having added this definition, we can now reuse this behavior when defininf a type:
+Having added this definition, we can now reuse this behavior when defining a type:
 
 ```
 struct Foo{
@@ -336,7 +339,7 @@ struct Foo{
 }
 ```
 
-If more sophisticated behavior is required, we can declare "function bridges", that is, declare the signature of a function annotated with an Java implementation:
+If more sophisticated behavior is required, we can declare "function bridges", that is, declare the signature of a function annotated with a Java implementation:
 
 ```
 @(org.foo.VeryComplexEncoding)
@@ -402,7 +405,7 @@ struct Block2@(offset=9){
 | `whl(name, Token, predicate)` | to be determined | |
 | `opt(name, Token)` | to be determined | |
 | `token(name)` | get a reference to a token "type" instead of a value | `T.type` |
-| `tie(name, Token, data)` | Run a token parser on the result of a data expression | `u8[] name = parse(token, data)` (`parse` is a native function of signature `u8[] parse(typ tokenType, u8[] data)`)|
+| `tie(name, Token, data)` | Run a token parser on the result of a data expression | `u8[] name = parse<Token>(data)` (`Token` is a type parameter representing the token type, while `data` corresponds to a list of bytes, having type `u8[]`)|
 | `until(name, initialSize?, stepSize?, maxSize?, terminatorToken)` | unclear, the size params are all optional | |
 | `when(name, Token, predicate)` | unsure | |
 
