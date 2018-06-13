@@ -302,7 +302,7 @@ In order to access the `firstName` field of the inner struct, assuming that we h
 
 # Parsing
 
-Sometimes it is necessary to write generic code that is independent of one specific format specification. In those cases, we can use the `parse` expression, that parses a given list of bytes according to a token type specified as a type paramerer. We have not discussed type parameters in this document as this is a feature we will add in a next iteration. Consider this example, illustrating the use of `parse`:
+Sometimes it is necessary to write generic code that is independent of one specific format specification. In those cases, we want to have parameterized parsing (`tie` in metal). For this, we can use the `parse` expression, that parses a given list of bytes according to a token type specified as a type parameter. We have not discussed type parameters in this document as this is a feature we will add in a next iteration. Consider this example, illustrating the use of `parse`:
 
 ```
 struct Digit{
@@ -313,12 +313,21 @@ struct TwoXs<X>{
 	u8[] first
 	u8[] second
 	X firstX = parse<X>(first)
-	X secondX  parse<X>(second)
+	X secondX =  parse<X>(second)
 }
 
 struct Simple{
 	TwoXs<Digit> as
 	X oneX = as.firstX
+}
+```
+
+Similarly, when we just want to have a parameteric field in the structure, you can also use it directly. So `TwoXs` could also have been written like:
+
+```
+struct TwoXs<X>{
+	X firstX
+	X secondX
 }
 ```
 
@@ -370,21 +379,21 @@ Another meta-property is `offset`, that creates a new parsing pointer (disconnec
 struct Root {
     // parsing pointer is at position 0
     u8 oneByte
-    // parsing pointers is at position 1
+    // parsing pointer is at position 1
     u32 oneInt
-    // parsing pointers is at position 5
+    // parsing pointer is at position 5
     Block2 sim
-    // parsing pointers is at position 5
+    // parsing pointer is at position 5
     Block2 sim
-    // parsing pointers is at position 5
+    // parsing pointer is at position 5
     u8 oneByte
-    // parsing pointers is at position 6
+    // parsing pointer is at position 6
 }
 
 struct Block2@(offset=9){
-    // parsing pointers is at position 9
+    // parsing pointer is at position 9
     u8[] content[4]
-    // parsing pointers is at position 13
+    // parsing pointer is at position 13
 }
 ```
 
