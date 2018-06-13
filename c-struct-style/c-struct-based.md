@@ -431,10 +431,10 @@ struct Block2@(offset=9){
 | `shl` | | `l << r` |
 | `shr` | | `l >> r` |
 | `and` | binary and | `l & r` |
-| `or` |  binary or | `l & r` |
+| `or` |  binary or | `l | r` |
 | `not` |  binary (and boolean) not | `!l` |
 | `and` | boolean and | `l && r` |
-| `or` |  boolean or | `l && r` |
+| `or` |  boolean or | `l || r` |
 | `eq* | comparision operators | default comparison operators |
 | `con` | constants | literal syntax for arbitrary precision ints, strings, arrays |
 | `len(l)` | the size of a token | `aToken.size` |
